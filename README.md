@@ -1,4 +1,4 @@
-# ai-projects
-Some simple AI projects made with Gemini, Claude AI etc.
+# chess
+My first AI project.
 
-These projects are licensed under MIT License. 
+Made with Gemini and Claude AI

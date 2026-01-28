@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+     
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Georgia', serif; background-color: #ffffff; min-height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        
+        #version-tag { position: fixed; bottom: 10px; right: 15px; font-size: 11px; color: #999; font-family: sans-serif; letter-spacing: 0.5px; z-index: 3000; }
+        .footer-btns { position: fixed; bottom: 10px; left: 15px; display: flex; gap: 10px; z-index: 3000; }
+        .circle-btn { width: 30px; height: 30px; border: 2px solid #000; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; background: #fff; transition: 0.2s; font-weight: bold; }
+        .circle-btn:hover { background: #eee; transform: scale(1.1); }
+        #y-btn { font-family: 'Courier New', Courier, monospace; font-size: 18px; text-decoration: none; color: #000; }
+
+        /* Chess V1 */
+        .info-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 4000; justify-content: center; align-items: center; }
+        .info-content { background: #fff; border: 3px solid #000; width: 90%; max-width: 450px; padding: 30px; position: relative; box-shadow: 10px 10px 0px #000; }
+        .close-info { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; }
+        
+        #user-info-area { position: absolute; top: 20px; left: 20px; font-size: 18px; font-weight: bold; z-index: 100; }
+        #change-name { font-size: 11px; cursor: pointer; text-decoration: underline; color: #666; font-weight: normal; margin-left: 10px; }
+        
+        #lang-wrapper { position: absolute; top: 20px; right: 20px; z-index: 2000; }
+        #lang-btn { background: #fff; border: 2px solid #000; padding: 8px 15px; cursor: pointer; font-weight: bold; min-width: 120px; text-align: center; }
+        #lang-content { display: none; position: absolute; right: 0; background: #fff; border: 2px solid #000; min-width: 120px; }
+        #lang-wrapper:hover #lang-content { display: block; }
+        .lang-option { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+
+        #menu, #difficulty-menu, #side-choice-menu, #game { display: none; flex-direction: column; align-items: center; gap: 30px; }
+        #login-screen { position: fixed; inset: 0; background: #fff; z-index: 1000; display: none; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
+        #login-screen input { padding: 15px; font-size: 20px; border: 3px solid #000; width: 300px; }
+
+        h1 { font-size: 64px; font-weight: bold; letter-spacing: 8px; text-transform: uppercase; }
+        .menu-btn { padding: 18px 50px; font-size: 20px; background-color: #d0d0d0; border: 3px solid #000; cursor: pointer; min-width: 280px; }
+        .back-nav { align-self: flex-start; cursor: pointer; text-decoration: underline; font-weight: bold; margin-bottom: 10px; }
+
+        
+        #game { flex-direction: row; gap: 30px; padding: 20px; align-items: flex-start; }
+        #board { display: grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border: 3px solid #000; }
+        #board.flipped { transform: rotate(180deg); }
+        #board.flipped .square img { transform: rotate(180deg); }
+        .square { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; position: relative; }
+        .white { background-color: #ffffff; }
+        .black { background-color: #000000; }
+        .square img { width: 50px; height: 50px; z-index: 5; cursor: pointer; }
+        .highlight::after { content: ''; position: absolute; inset: 0; background: rgba(0, 128, 0, 0.4); z-index: 1; }
+        .selected { outline: 3px solid #444; outline-offset: -3px; }
+
+        
+        #promotion-modal { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.7); z-index: 5000; justify-content: center; align-items: center; flex-direction: column; }
+        .promo-options { display: flex; gap: 20px; }
+        .promo-btn { width: 100px; height: 100px; border: 3px solid #000; background: #d0d0d0; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .promo-btn:hover { transform: scale(1.05); background: #b0b0b0; }
+        .promo-btn img { width: 80px; height: 80px; }
+
+        .right-panel { display: flex; flex-direction: column; gap: 10px; width: 240px; }
+        .timer-container { display: flex; background-color: #fff59d; border: 2px solid #000; padding: 10px 0; text-align: center; }
+        .timer-box { flex: 1; border-right: 1px solid #000; }
+        .timer-digits { font-size: 32px; font-weight: bold; font-family: monospace; }
+        .move-sheet { background-color: #f5f5f5; border: 2px solid #000; height: 160px; overflow-y: auto; padding: 10px; font-family: monospace; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000; }
+    </style>
+</head>
+<body>
+
+    <div class="footer-btns">
+        <div class="circle-btn" onclick="toggleInfo(true)">i</div>
+        <a href="https://yuce.me" target="_blank" class="circle-btn" id="y-btn">y</a>
+    </div>
+    <div id="version-tag">v0.6.2 Beta | Work In Progress</div>
+
+    <div id="info-modal" class="info-modal">
+        <div class="info-content">
+            <span class="close-info" onclick="toggleInfo(false)">&times;</span>
+            <div class="info-title" id="txt-about-title">Hakkında</div>
+            <div class="info-body">
+                Made by <b>Görkem TEKOL</b> (a.k.a n0rches, gorkemtekol)<br>
+                GitHub project on <a href="https://github.com/gorkemtekol/ai-projects" target="_blank">github.com/gorkemtekol/ai-projects</a>.<br><br>
+                For more information and support,
+                <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <div style="padding:5px; border:1px solid #000; background:#f9f9f9; flex:1; font-family:monospace;">gorkemtekol@gmail.com</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="user-info-area">
+        <span id="user-display-name"></span>
+        <span id="change-name" onclick="forceNewName()"></span>
+    </div>
+
+    <div id="lang-wrapper">
+        <div id="lang-btn">Language</div>
+        <div id="lang-content">
+            <div class="lang-option" onclick="changeLang('en')">English</div>
+            <div class="lang-option" onclick="changeLang('tr')">Türkçe</div>
+            <div class="lang-option" onclick="changeLang('es')">Español</div>
+            <div class="lang-option" onclick="changeLang('de')">Deutsch</div>
+            <div class="lang-option" onclick="changeLang('ru')">Русский</div>
+            <div class="lang-option" onclick="changeLang('fr')">Français</div>
+        </div>
+    </div>
+
+    <div id="login-screen">
+        <h1 id="txt-welcome">HOŞ GELDİN</h1>
+        <input type="text" id="username-input">
+        <button class="menu-btn" onclick="saveName()" id="btn-save">KAYDET</button>
+    </div>
+
+    <div id="menu">
+        <h1 id="txt-logo">SATRANÇ</h1>
+        <button class="menu-btn" id="btn-ai" onclick="prepare('ai')">AI</button>
+        <button class="menu-btn" id="btn-human" onclick="prepare('human')">İKİ OYUNCU</button>
+    </div>
+
+    <div id="difficulty-menu">
+        <div class="back-nav" onclick="goBackToMenu()">← <span class="txt-back">GERİ</span></div>
+        <h1 id="txt-diff-title">ZORLUK</h1>
+        <button class="menu-btn" id="btn-easy" onclick="setDiff('easy')">KOLAY</button>
+        <button class="menu-btn" id="btn-med" onclick="setDiff('medium')">ORTA</button>
+        <button class="menu-btn" id="btn-hard" onclick="setDiff('hard')">ZOR</button>
+    </div>
+
+    <div id="side-choice-menu">
+        <div class="back-nav" onclick="goBackToMenu()">← <span class="txt-back">GERİ</span></div>
+        <h1 id="txt-side-title">RENK SEÇ</h1>
+        <div style="display:flex; gap:20px;">
+            <button class="promo-btn" onclick="start('w')"><img src="https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png"></button>
+            <button class="promo-btn" onclick="start('b')"><img src="https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png"></button>
+        </div>
+    </div>
+
+    <div id="game">
+        <div class="game-left">
+            <div style="display:flex; justify-content:space-between; width:480px; margin-bottom:10px;">
+                <span id="turn-txt">...</span>
+                <button onclick="location.reload()">MENÜ</button>
+            </div>
+            <div id="board"></div>
+        </div>
+        <div class="right-panel">
+            <div class="timer-container">
+                <div class="timer-box"><div id="t1-label" style="font-size:10px;">P1</div><div id="timer-1" class="timer-digits">0:00</div></div>
+                <div class="timer-box" style="border:none;"><div id="t2-label" style="font-size:10px;">P2</div><div id="timer-2" class="timer-digits">0:00</div></div>
+            </div>
+            <div class="move-sheet" id="w-moves"></div>
+            <div class="move-sheet" id="b-moves"></div>
+        </div>
+    </div>
+
+    <div id="promotion-modal">
+        <h2 id="txt-promo">TERFİ SEÇ</h2><br>
+        <div class="promo-options" id="promo-list"></div>
+    </div>
+
+    <div id="over-modal" class="modal" onclick="location.reload()">
+        <div class="info-content" style="text-align:center;">
+            <h2 id="over-txt"></h2>
+            <p style="margin-top:10px; font-size:12px;">(Menüye dönmek için tıkla)</p>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            tr: { about: "Hakkında", welcome: "HOŞ GELDİN", save: "KAYDET", logo: "SATRANÇ", ai: "AI", human: "İKİ OYUNCU", diff: "ZORLUK", easy: "KOLAY", med: "ORTA", hard: "ZOR", side: "RENK SEÇ", white: "Beyaz", black: "Siyah", user: "Kullanıcı", change: "[Değiştir]", turnW: "BEYAZDA", turnB: "SİYAHDA", win: " Kazandı!", back: "GERİ", promo: "TERFİ SEÇ" },
+            en: { about: "About", welcome: "WELCOME", save: "SAVE", logo: "CHESS", ai: "AI", human: "TWO PLAYERS", diff: "DIFFICULTY", easy: "EASY", med: "MEDIUM", hard: "HARD", side: "PICK COLOR", white: "White", black: "Black", user: "User", change: "[Change]", turnW: "WHITE'S TURN", turnB: "BLACK'S TURN", win: " Wins!", back: "BACK", promo: "PROMOTION" },
+            es: { about: "Acerca de", welcome: "BIENVENIDO", save: "GUARDAR", logo: "AJEDREZ", ai: "AI", human: "DOS JUGADORES", diff: "DIFICULTAD", easy: "FÁCIL", med: "MEDIO", hard: "DIFÍCIL", side: "ELEGIR COLOR", white: "Blanco", black: "Negro", user: "Usuario", change: "[Cambiar]", turnW: "TURNO BLANCO", turnB: "TURNO NEGRO", win: " ¡Ganó!", back: "ATRÁS", promo: "PROMOCIÓN" },
+            de: { about: "Über", welcome: "WILLKOMMEN", save: "SPEICHERN", logo: "SCHACH", ai: "AI", human: "ZWEI SPIELER", diff: "STUFE", easy: "LEICHT", med: "MITTEL", hard: "SCHWER", side: "FARBE WÄHLEN", white: "Weiß", black: "Schwarz", user: "Benutzer", change: "[Ändern]", turnW: "WEISS AM ZUG", turnB: "SCHWARZ AM ZUG", win: " Hat gewonnen!", back: "ZURÜCK", promo: "BEFÖRDERUNG" },
+            ru: { about: "О программе", welcome: "ДОБРО ПОЖАЛОВАТЬ", save: "СОХРАНИТЬ", logo: "ШАХМАТЫ", ai: "AI", human: "ДВА ИГРОКА", diff: "СЛОЖНОСТЬ", easy: "ЛЕГКО", med: "СРЕДНЕ", hard: "СЛОЖНО", side: "ВЫБОР ЦВЕТА", white: "Белые", black: "Черные", user: "Игрок", change: "[Изм.]", turnW: "ХОД БЕЛЫХ", turnB: "ХОД ЧЕРНЫХ", win: " Победил!", back: "НАЗАД", promo: "ПРЕВРАЩЕНИЕ" },
+            fr: { about: "À propos", welcome: "BIENVENUE", save: "SAUVER", logo: "ÉCHECS", ai: "AI", human: "DEUX JOUEURS", diff: "DIFFICULTÉ", easy: "FACILE", med: "MOYEN", hard: "DIFFICILE", side: "CHOISIR COULEUR", white: "Blanc", black: "Noir", user: "Utilisateur", change: "[Changer]", turnW: "AUX BLANCS", turnB: "AUX NOIRS", win: " A gagné!", back: "RETOUR", promo: "PROMOTION" }
+        };
+
+        const IMG = {
+            'wK': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png', 'wQ': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png',
+            'wR': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wr.png', 'wB': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wb.png',
+            'wN': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wn.png', 'wP': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wp.png',
+            'bK': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png', 'bQ': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png',
+            'bR': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/br.png', 'bB': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bb.png',
+            'bN': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bn.png', 'bP': 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bp.png'
+        };
+
+        let board = [], turn = 'w', myColor = 'w', mode = '', over = false, sel = null, moves = [];
+        let userName = localStorage.getItem('chess_username');
+        let lang = localStorage.getItem('chess_lang') || 'tr';
+        let timerW = 0, timerB = 0, timerInterval, pendingPromo = null;
+
+        window.onload = () => {
+            updateUI();
+            if (!userName) document.getElementById('login-screen').style.display = 'flex';
+            else { showUsername(); document.getElementById('menu').style.display = 'flex'; }
+        };
+
+        function toggleInfo(s) { document.getElementById('info-modal').style.display = s ? 'flex' : 'none'; }
+        function changeLang(l) { lang = l; localStorage.setItem('chess_lang', l); updateUI(); }
+        function goBackToMenu() { document.getElementById('difficulty-menu').style.display = 'none'; document.getElementById('side-choice-menu').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; }
+
+        function updateUI() {
+            const t = translations[lang] || translations['en'];
+            document.getElementById('txt-about-title').innerText = t.about;
+            document.getElementById('txt-welcome').innerText = t.welcome;
+            document.getElementById('btn-save').innerText = t.save;
+            document.getElementById('txt-logo').innerText = t.logo;
+            document.getElementById('btn-ai').innerText = t.ai;
+            document.getElementById('btn-human').innerText = t.human;
+            document.getElementById('txt-diff-title').innerText = t.diff;
+            document.getElementById('btn-easy').innerText = t.easy;
+            document.getElementById('btn-med').innerText = t.med;
+            document.getElementById('btn-hard').innerText = t.hard;
+            document.getElementById('txt-side-title').innerText = t.side;
+            document.getElementById('change-name').innerText = t.change;
+            document.getElementById('txt-promo').innerText = t.promo;
+            document.querySelectorAll('.txt-back').forEach(e => e.innerText = t.back);
+            if (userName) showUsername();
+            updateTurnTxt();
+        }
+
+        function showUsername() { document.getElementById('user-display-name').innerText = (translations[lang]?.user || "User") + ": " + userName; }
+        function forceNewName() { localStorage.removeItem('chess_username'); location.reload(); }
+        function saveName() { const v = document.getElementById('username-input').value.trim(); if(v){ localStorage.setItem('chess_username',v); userName=v; showUsername(); document.getElementById('login-screen').style.display='none'; document.getElementById('menu').style.display='flex'; } }
+
+        function prepare(m) { mode = m; document.getElementById('menu').style.display = 'none'; if(m === 'ai') document.getElementById('difficulty-menu').style.display = 'flex'; else document.getElementById('side-choice-menu').style.display = 'flex'; }
+        function setDiff(d) { document.getElementById('difficulty-menu').style.display = 'none'; document.getElementById('side-choice-menu').style.display = 'flex'; }
+
+        function start(c) {
+            myColor = c;
+            if(c === 'b') document.getElementById('board').classList.add('flipped');
+            const t = translations[lang];
+            document.getElementById('t1-label').innerText = (mode==='ai' && c==='b' ? "AI" : (mode==='ai' ? userName : t.white));
+            document.getElementById('t2-label').innerText = (mode==='ai' && c==='w' ? "AI" : (mode==='ai' ? userName : t.black));
+            document.getElementById('side-choice-menu').style.display = 'none';
+            document.getElementById('game').style.display = 'flex';
+            initBoard();
+            timerInterval = setInterval(() => { if(!over && !pendingPromo){ if(turn==='w') timerW++; else timerB++; updateTimers(); } }, 1000);
+            if(mode==='ai' && myColor==='b') setTimeout(aiMove, 600);
+        }
+
+        function updateTimers() {
+            const f = s => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+            document.getElementById('timer-1').innerText = f(timerW);
+            document.getElementById('timer-2').innerText = f(timerB);
+        }
+
+        function initBoard() {
+            board = [
+                ['bR','bN','bB','bQ','bK','bB','bN','bR'], ['bP','bP','bP','bP','bP','bP','bP','bP'],
+                [null,null,null,null,null,null,null,null], [null,null,null,null,null,null,null,null],
+                [null,null,null,null,null,null,null,null], [null,null,null,null,null,null,null,null],
+                ['wP','wP','wP','wP','wP','wP','wP','wP'], ['wR','wN','wB','wQ','wK','wB','wN','wR']
+            ];
+            draw();
+        }
+
+        function draw() {
+            const bEl = document.getElementById('board'); bEl.innerHTML = '';
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+                const s = document.createElement('div');
+                s.className = `square ${(r+c)%2===0?'white':'black'}`;
+                if(board[r][c]) {
+                    const img = document.createElement('img');
+                    img.src = IMG[board[r][c]];
+                    if(board[r][c][0]===turn && (mode!=='ai'||turn===myColor)) img.onclick = () => { sel={r,c}; moves=getLegals(r,c,board); draw(); };
+                    s.appendChild(img);
+                }
+                s.onclick = () => { if(sel && moves.some(m=>m.r===r && m.c===c)) doMove(sel.r, sel.c, r, c); };
+                if(sel?.r===r && sel?.c===c) s.classList.add('selected');
+                if(moves.some(m=>m.r===r && m.c===c)) s.classList.add('highlight');
+                bEl.appendChild(s);
+            }
+        }
+
+        function doMove(fr, fc, tr, tc) {
+            let p = board[fr][fc];
+            if(p[1]==='P' && (tr===0 || tr===7)) {
+                pendingPromo = { fr, fc, tr, tc, col: p[0] };
+                showPromoMenu(p[0]);
+                return;
+            }
+            executeMove(fr, fc, tr, tc, p);
+        }
+
+        function showPromoMenu(col) {
+            const modal = document.getElementById('promotion-modal');
+            const list = document.getElementById('promo-list');
+            list.innerHTML = '';
+            ['Q','N','B','R'].forEach(type => {
+                const btn = document.createElement('button');
+                btn.className = 'promo-btn';
+                btn.innerHTML = `<img src="${IMG[col+type]}">`;
+                btn.onclick = () => {
+                    executeMove(pendingPromo.fr, pendingPromo.fc, pendingPromo.tr, pendingPromo.tc, col+type);
+                    modal.style.display = 'none';
+                    pendingPromo = null;
+                };
+                list.appendChild(btn);
+            });
+            modal.style.display = 'flex';
+        }
+
+        function executeMove(fr, fc, tr, tc, piece) {
+            board[tr][tc] = piece; board[fr][fc] = null;
+            document.getElementById(turn==='w'?'w-moves':'b-moves').innerHTML += `<div>${piece[1]}${String.fromCharCode(97+tc)}${8-tr}</div>`;
+            turn = turn === 'w' ? 'b' : 'w';
+            sel = null; moves = []; draw(); check();
+            if(!over && mode === 'ai' && turn !== myColor) setTimeout(aiMove, 600);
+        }
+
+        function getBase(r, c, b) {
+            const p = b[r][c]; if(!p) return [];
+            const m = [], col = p[0], t = p[1];
+            const add = (nr, nc) => {
+                if(nr>=0 && nr<8 && nc>=0 && nc<8) {
+                    if(!b[nr][nc] || b[nr][nc][0] !== col) { m.push({r:nr, c:nc}); return !b[nr][nc]; }
+                } return false;
+            };
+            if(t==='P') {
+                const d = col==='w'?-1:1;
+                if(b[r+d] && !b[r+d][c]) { m.push({r:r+d, c:c}); if(((col==='w'&&r===6)||(col==='b'&&r===1)) && !b[r+2*d][c]) m.push({r:r+2*d, c:c}); }
+                [[-1,d],[1,d]].forEach(o => { if(b[r+o[1]]?.[c+o[0]] && b[r+o[1]][c+o[0]][0] !== col) m.push({r:r+o[1], c:c+o[0]}); });
+            } else if(t==='N') [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(o => add(r+o[0], c+o[1]));
+            else if(t==='K') [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]].forEach(o => add(r+o[0], c+o[1]));
+            else {
+                const ds = (t==='R')?[[0,1],[0,-1],[1,0],[-1,0]]:(t==='B')?[[1,1],[1,-1],[-1,1],[-1,-1]]:[[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+                ds.forEach(d => { let nr=r+d[0], nc=c+d[1]; while(add(nr, nc)) { nr+=d[0]; nc+=d[1]; } });
+            }
+            return m;
+        }
+
+        function getLegals(r, c, b) {
+            return getBase(r, c, b).filter(m => {
+                const tmp = b.map(row => [...row]); tmp[m.r][m.c] = tmp[r][c]; tmp[r][c] = null;
+                return !inCheck(b[r][c][0], tmp);
+            });
+        }
+
+        function inCheck(col, b) {
+            let kr, kc; for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(b[r][c]===col+'K'){kr=r; kc=c;}
+            if(kr===undefined) return false;
+            const opp = col==='w'?'b':'w';
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(b[r][c]?.startsWith(opp)) if(getBase(r,c,b).some(m=>m.r===kr && m.c===kc)) return true;
+            return false;
+        }
+
+        function check() {
+            const has = board.some((row, r) => row.some((p, c) => p?.startsWith(turn) && getLegals(r, c, board).length > 0));
+            if(!has) { over = true; const t = translations[lang]; document.getElementById('over-txt').innerText = (turn === 'w' ? t.black : t.white) + t.win; document.getElementById('over-modal').style.display = 'flex'; }
+            updateTurnTxt();
+        }
+
+        function updateTurnTxt() { const t = translations[lang]; if(document.getElementById('turn-txt')) document.getElementById('turn-txt').innerText = turn==='w' ? t.turnW : t.turnB; }
+
+        function aiMove() {
+            let mvs = [];
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(board[r][c]?.startsWith(turn)) getLegals(r,c,board).forEach(m=>mvs.push({fr:r, fc:c, tr:m.r, tc:m.c, cap:board[m.r][m.c]}));
+            if(!mvs.length) return;
+            mvs.sort((a,b) => (b.cap?1:0)-(a.cap?1:0));
+            const b = mvs[0]; 
+            let p = board[b.fr][b.fc];
+            if(p[1]==='P' && (b.tr===0 || b.tr===7)) p = p[0]+'Q';
+            executeMove(b.fr, b.fc, b.tr, b.tc, p);
+        }
+    </script>
+</body>
+</html>

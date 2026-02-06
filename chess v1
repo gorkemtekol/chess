@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-     
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
@@ -71,7 +70,7 @@
         <div class="circle-btn" onclick="toggleInfo(true)">i</div>
         <a href="https://yuce.me" target="_blank" class="circle-btn" id="y-btn">y</a>
     </div>
-    <div id="version-tag">v0.6.2 Beta | Work In Progress</div>
+    <div id="version-tag">Chess v1.0 | Public Release</div>
 
     <div id="info-modal" class="info-modal">
         <div class="info-content">
